@@ -136,6 +136,10 @@ check(
 );
 check(/event\.key === "Escape"/.test(scripts), "Mobile menu does not handle Escape");
 check(/aria-expanded/.test(scripts), "Mobile menu state is not exposed");
+check(
+  /matchMedia\("\(min-width: 52\.01rem\)"\)/.test(scripts),
+  "Menu breakpoint is not aligned with the CSS navigation breakpoint",
+);
 
 const css = await read("css/styles.css");
 for (const token of [
@@ -152,6 +156,31 @@ for (const token of [
   );
 }
 check(!/@import|fonts\.googleapis/i.test(css), "Third-party font dependency remains");
+
+for (const path of [
+  "package.json",
+  "package-lock.json",
+  "gulpfile.js",
+  "scss",
+  "libs",
+  "Resume",
+  "css/bootstrap.min.css",
+  "js/scripts.min.js",
+]) {
+  try {
+    await access(join(root, path));
+    failures.push(`Legacy path remains: ${path}`);
+  } catch {
+    // The legacy path is absent as required.
+  }
+}
+
+const readme = await read("README.md");
+check(/marcocardoso\.com\.br/.test(readme), "README lacks the production URL");
+check(
+  /node tests\/validate-site\.mjs/.test(readme),
+  "README lacks the validation command",
+);
 
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join("\n"));

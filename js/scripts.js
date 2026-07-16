@@ -106,7 +106,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 window.addEventListener("resize", () => {
-  if (window.matchMedia("(min-width: 48.01rem)").matches) setMenu(false);
+  if (window.matchMedia("(min-width: 52.01rem)").matches) setMenu(false);
 });
 
 document.querySelector("#current-year").textContent = new Date().getFullYear();
