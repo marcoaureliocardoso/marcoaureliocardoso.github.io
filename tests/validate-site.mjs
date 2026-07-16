@@ -137,6 +137,22 @@ check(
 check(/event\.key === "Escape"/.test(scripts), "Mobile menu does not handle Escape");
 check(/aria-expanded/.test(scripts), "Mobile menu state is not exposed");
 
+const css = await read("css/styles.css");
+for (const token of [
+  ":focus-visible",
+  "prefers-reduced-motion",
+  "@media",
+  ".skip-link",
+  ".menu-toggle",
+  ".site-menu.is-open",
+]) {
+  check(
+    css.includes(token),
+    `Missing CSS accessibility/responsive token: ${token}`,
+  );
+}
+check(!/@import|fonts\.googleapis/i.test(css), "Third-party font dependency remains");
+
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join("\n"));
   process.exit(1);
