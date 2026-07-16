@@ -33,6 +33,35 @@ check(
 check(/Claude Code/.test(html) && /Codex/.test(html), "Missing agentic coding tools");
 check(/IFES/.test(html) && /UFES/.test(html), "Missing verified institutional experience");
 
+for (const landmark of ["header", "nav", "main", "footer"]) {
+  check(new RegExp(`<${landmark}\\b`).test(html), `Missing ${landmark} landmark`);
+}
+
+for (const id of [
+  "about",
+  "experience",
+  "projects",
+  "skills",
+  "education",
+  "contact",
+]) {
+  check(new RegExp(`id="${id}"`).test(html), `Missing section: ${id}`);
+}
+
+check(/class="skip-link"/.test(html), "Missing skip link");
+check(
+  /property="og:title"/.test(html) && /name="twitter:card"/.test(html),
+  "Missing social metadata",
+);
+check(
+  !/Download Resume|Baixar currículo|Resume\/.*\.pdf/i.test(html),
+  "Stale resume remains promoted",
+);
+check(
+  !/repositorio\.sead\.ufes\.br/.test(html),
+  "Unavailable DSpace live link remains exposed",
+);
+
 for (const tag of html.match(/<img\b[^>]*>/gi) ?? []) {
   check(/\salt=("[^"]*"|'[^']*')/.test(tag), `Image lacks alt: ${tag}`);
 }
