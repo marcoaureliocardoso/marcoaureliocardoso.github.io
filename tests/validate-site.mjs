@@ -86,7 +86,7 @@ for (const pattern of banned) {
 }
 
 for (const path of [
-  "js/translations.js",
+  "js/translations.mjs",
   "js/scripts.js",
   "css/styles.css",
   "robots.txt",
@@ -98,6 +98,44 @@ for (const path of [
     failures.push(`Missing required file: ${path}`);
   }
 }
+
+let translations;
+try {
+  ({ translations } = await import("../js/translations.mjs"));
+} catch {
+  failures.push("Translations module cannot be loaded");
+}
+
+if (translations) {
+  const englishKeys = Object.keys(translations.en ?? {}).sort();
+  const portugueseKeys = Object.keys(translations["pt-BR"] ?? {}).sort();
+  check(
+    JSON.stringify(englishKeys) === JSON.stringify(portugueseKeys),
+    "Translation keys differ between languages",
+  );
+
+  for (const [, key] of html.matchAll(
+    /data-i18n(?:-aria|-alt)?="([^"]+)"/g,
+  )) {
+    check(key in (translations.en ?? {}), `Missing English translation: ${key}`);
+    check(
+      key in (translations["pt-BR"] ?? {}),
+      `Missing Portuguese translation: ${key}`,
+    );
+  }
+}
+
+const scripts = await read("js/scripts.js");
+check(
+  /type="module"\s+src="js\/scripts\.js"/.test(html),
+  "Browser module is not loaded by the page",
+);
+check(
+  /localStorage\.setItem\("portfolio-language"/.test(scripts),
+  "Language preference is not persisted",
+);
+check(/event\.key === "Escape"/.test(scripts), "Mobile menu does not handle Escape");
+check(/aria-expanded/.test(scripts), "Mobile menu state is not exposed");
 
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join("\n"));

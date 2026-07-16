@@ -1,100 +1,117 @@
-/*!
-    Title: Dev Portfolio Template
-    Version: 1.2.2
-    Last Change: 03/25/2020
-    Author: Ryan Fitzgerald
-    Repo: https://github.com/RyanFitzgerald/devportfolio-template
-    Issues: https://github.com/RyanFitzgerald/devportfolio-template/issues
+import { translations } from "./translations.mjs";
 
-    Description: This file contains all the scripts associated with the single-page
-    portfolio website.
-*/
+const supportedLanguages = new Set(["en", "pt-BR"]);
+const menuButton = document.querySelector(".menu-toggle");
+const menu = document.querySelector("#site-menu");
+const description = document.querySelector('meta[name="description"]');
+const openGraphTitle = document.querySelector('meta[property="og:title"]');
+const openGraphDescription = document.querySelector(
+  'meta[property="og:description"]',
+);
 
-(function($) {
+function translateAttribute(selector, datasetKey, targetAttribute, dictionary) {
+  document.querySelectorAll(selector).forEach((element) => {
+    const key = element.dataset[datasetKey];
+    if (dictionary[key]) element.setAttribute(targetAttribute, dictionary[key]);
+  });
+}
 
-    // Show current year
-    $("#current-year").text(new Date().getFullYear());
+function storedLanguage() {
+  try {
+    return localStorage.getItem("portfolio-language");
+  } catch {
+    return null;
+  }
+}
 
-    // Remove no-js class
-    $('html').removeClass('no-js');
+function persistLanguage(language) {
+  try {
+    localStorage.setItem("portfolio-language", language);
+  } catch {
+    // The selected language still applies for this page view.
+  }
+}
 
-    // Animate to section when nav is clicked
-    $('header a').click(function(e) {
+function currentDictionary() {
+  return translations[document.documentElement.lang] ?? translations.en;
+}
 
-        // Treat as normal link if no-scroll class
-        if ($(this).hasClass('no-scroll')) return;
+function updateMenuLabel() {
+  const isOpen = menuButton.getAttribute("aria-expanded") === "true";
+  const key = isOpen ? "nav.close" : "nav.open";
+  menuButton.setAttribute("aria-label", currentDictionary()[key]);
+}
 
-        e.preventDefault();
-        var heading = $(this).attr('href');
-        var scrollDistance = $(heading).offset().top;
+export function setLanguage(language) {
+  const selected = supportedLanguages.has(language) ? language : "en";
+  const dictionary = translations[selected];
 
-        $('html, body').animate({
-            scrollTop: scrollDistance + 'px'
-        }, Math.abs(window.pageYOffset - $(heading).offset().top) / 1);
+  document.documentElement.lang = selected;
+  document.title = dictionary["meta.title"];
+  description.content = dictionary["meta.description"];
+  openGraphTitle.content = dictionary["meta.title"];
+  openGraphDescription.content = dictionary["meta.description"];
 
-        // Hide the menu once clicked if mobile
-        if ($('header').hasClass('active')) {
-            $('header, body').removeClass('active');
-        }
-    });
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    const value = dictionary[element.dataset.i18n];
+    if (value) element.textContent = value;
+  });
 
-    // Scroll to top
-    $('#to-top').click(function() {
-        $('html, body').animate({
-            scrollTop: 0
-        }, 500);
-    });
+  translateAttribute(
+    "[data-i18n-aria]",
+    "i18nAria",
+    "aria-label",
+    dictionary,
+  );
+  translateAttribute("[data-i18n-alt]", "i18nAlt", "alt", dictionary);
 
-    // Scroll to first element
-    $('#lead-down span').click(function() {
-        var scrollDistance = $('#lead').next().offset().top;
-        $('html, body').animate({
-            scrollTop: scrollDistance + 'px'
-        }, 500);
-    });
+  document.querySelectorAll("[data-language]").forEach((button) => {
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.language === selected),
+    );
+  });
 
-    // Create timeline
-    $('#experience-timeline').each(function() {
+  persistLanguage(selected);
+  updateMenuLabel();
+}
 
-        $this = $(this); // Store reference to this
-        $userContent = $this.children('div'); // user content
+function setMenu(open) {
+  menuButton.setAttribute("aria-expanded", String(open));
+  menu.classList.toggle("is-open", open);
+  document.body.classList.toggle("menu-open", open);
+  updateMenuLabel();
+}
 
-        // Create each timeline block
-        $userContent.each(function() {
-            $(this).addClass('vtimeline-content').wrap('<div class="vtimeline-point"><div class="vtimeline-block"></div></div>');
-        });
+document.querySelectorAll("[data-language]").forEach((button) => {
+  button.addEventListener("click", () => setLanguage(button.dataset.language));
+});
 
-        // Add icons to each block
-        $this.find('.vtimeline-point').each(function() {
-            $(this).prepend('<div class="vtimeline-icon"><i class="fa fa-map-marker"></i></div>');
-        });
+menuButton.addEventListener("click", () => {
+  setMenu(menuButton.getAttribute("aria-expanded") !== "true");
+});
 
-        // Add dates to the timeline if exists
-        $this.find('.vtimeline-content').each(function() {
-            var date = $(this).data('date');
-            if (date) { // Prepend if exists
-                $(this).parent().prepend('<span class="vtimeline-date">'+date+'</span>');
-            }
-        });
+menu.addEventListener("click", (event) => {
+  if (event.target.closest("a")) setMenu(false);
+});
 
-    });
+document.addEventListener("keydown", (event) => {
+  if (
+    event.key === "Escape" &&
+    menuButton.getAttribute("aria-expanded") === "true"
+  ) {
+    setMenu(false);
+    menuButton.focus();
+  }
+});
 
-    // Open mobile menu
-    $('#mobile-menu-open').click(function() {
-        $('header, body').addClass('active');
-    });
+window.addEventListener("resize", () => {
+  if (window.matchMedia("(min-width: 48.01rem)").matches) setMenu(false);
+});
 
-    // Close mobile menu
-    $('#mobile-menu-close').click(function() {
-        $('header, body').removeClass('active');
-    });
+document.querySelector("#current-year").textContent = new Date().getFullYear();
 
-    // Load additional projects
-    $('#view-more-projects').click(function(e){
-        e.preventDefault();
-        $(this).fadeOut(300, function() {
-            $('#more-projects').fadeIn(300);
-        });
-    });
-
-})(jQuery);
+const savedLanguage = storedLanguage();
+if (supportedLanguages.has(savedLanguage) && savedLanguage !== "en") {
+  setLanguage(savedLanguage);
+}
